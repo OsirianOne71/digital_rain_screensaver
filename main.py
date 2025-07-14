@@ -1,3 +1,8 @@
+# File: main.py
+# Digital Rain Screensaver with Egyptian Hieroglyphs
+# Python 3.8+
+#! /usr/bin/env python3
+
 import pygame, random, argparse, sys
 
 class Symbol:
@@ -40,7 +45,7 @@ class Column:
         self.reset_column()
 
     def reset_column(self):
-        self.starts_midway = random.random() < 0.4  # Apply 40% chance every reset
+        self.starts_midway = random.random() < 0.5  # Apply 50% chance every reset
 
         if self.starts_midway:
             self.y_offset = random.randint(self.screen_h // 3, self.screen_h - self.glyph_height * 4)
@@ -89,32 +94,48 @@ def parse_unicode_range(rng):
         sys.exit()
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Digital Rain Screensaver with Egyptian Hieroglyphs",
+    class FriendlyArgParser(argparse.ArgumentParser):
+        def error(self, message):
+            sys.stderr.write(f"error: {message}\n\n")
+            self.print_help()
+            sys.exit(2)
+
+    parser = FriendlyArgParser(
+        description="Digital Rain Unicode Screensaver with Hieroglyphs & command switches",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument("--color", choices=["green", "blue"], default="blue")
-    parser.add_argument("--font", default="NotoSansEgyptianHieroglyphs-Regular.ttf")
-    parser.add_argument("--glyph_range", default="13000-1342F")
-    parser.add_argument("--min_font", type=int, default=12)
-    parser.add_argument("--max_font", type=int, default=36)
-    parser.add_argument("--rows", type=int, default=6)
-    parser.add_argument("--rain_speed", type=float, default=1.0)
-    parser.add_argument("--watermark", default=None)
-    parser.add_argument("--fps", type=int, default=30)
-    parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--color", choices=["green", "blue"], default="blue",
+                        help="Color theme for the rain (green or blue).")
+    parser.add_argument("--font", default="NotoSansEgyptianHieroglyphs-Regular.ttf",
+                        help="Font file to use for glyphs.")
+    parser.add_argument("--glyph_range", default="13000-1342F",
+                        help="Unicode range for glyphs from font file to be used, e.g. 13000-1342F.")
+    parser.add_argument("--min_font", type=int, default=12,
+                        help="Minimum font size for glyphs.")
+    parser.add_argument("--max_font", type=int, default=36,
+                        help="Maximum font size for glyphs.")
+    parser.add_argument("--rows", type=int, default=6,
+                        help="Number of layers front to back for rain columns.")
+    parser.add_argument("--rain_speed", type=float, default=3.0,
+                        help="Speed of the rain animation.")
+    parser.add_argument("--watermark", default="kaphre.png",
+                        help="Path to watermark image (shown bottom right). Can be 'none' to disable.")
+    parser.add_argument("--fps", type=int, default=30,
+                        help="Frames per second for animation.")
+    parser.add_argument("--debug", action="store_true",
+                        help="Show debug info (column grid lines).")
     args = parser.parse_args()
 
     pygame.init()
     info = pygame.display.Info()
     W, H = info.current_w, info.current_h
     screen = pygame.display.set_mode((W, H), pygame.FULLSCREEN)
-    pygame.display.set_caption("Hieroglyph Matrix Screensaver")
+    pygame.display.set_caption("Digital Rain Unicode Screensaver")
 
     glyph_range = parse_unicode_range(args.glyph_range)
 
-    base_color = pygame.Color(0, 255, 70) if args.color == "green" else pygame.Color(0, 120, 255)
-    glow_color = pygame.Color(180, 255, 180) if args.color == "green" else pygame.Color(80, 200, 255)
+    base_color = pygame.Color(0, 180, 255) if args.color == "blue" else pygame.Color(0, 255, 70)
+    glow_color = pygame.Color(80, 240, 255) if args.color == "blue" else pygame.Color(180, 255, 180)
 
     grid = []
     for r in range(args.rows):
@@ -131,16 +152,15 @@ def main():
         grid.append(row)
 
     wm = None
-    wx = wy = dx = dy = 0
     if args.watermark:
         try:
             wm = pygame.image.load(args.watermark).convert_alpha()
             scale = (H // 3) / wm.get_height()
             wm = pygame.transform.smoothscale(wm, (int(wm.get_width() * scale), int(wm.get_height() * scale)))
             wm.set_alpha(100)
-            wx = (W - wm.get_width()) // 2
-            wy = (H - wm.get_height()) // 2
-            dx = dy = 1
+            # Lock watermark to lower right corner
+            wx = W - wm.get_width() - 20  # 20px padding from right
+            wy = H - wm.get_height() - 20 # 20px padding from bottom
         except Exception as e:
             print(f"⚠️ Failed to load watermark: {args.watermark}")
 
@@ -156,10 +176,6 @@ def main():
         temp.fill((0, 0, 0))
 
         if wm:
-            wx += dx
-            wy += dy
-            if wx <= 0 or wx + wm.get_width() >= W: dx = -dx
-            if wy <= 0 or wy + wm.get_height() >= H: dy = -dy
             temp.blit(wm, (wx, wy))
 
         fade_surface = pygame.Surface((W, H), pygame.SRCALPHA)
