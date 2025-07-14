@@ -36,12 +36,21 @@ class Column:
         self.symbols = []
         self.age = 0
         self.wait_time = random.randint(60, 240)
+        self.starts_midway = False
         self.reset_column()
 
     def reset_column(self):
-        visible_rows = self.screen_h // self.glyph_height
-        self.max_length = random.randint(int(visible_rows * 0.6), int(visible_rows * 1.2))
-        self.y_offset = random.randint(-300, 0)
+        self.starts_midway = random.random() < 0.4  # Apply 40% chance every reset
+
+        if self.starts_midway:
+            self.y_offset = random.randint(self.screen_h // 3, self.screen_h - self.glyph_height * 4)
+            max_possible_length = (self.screen_h - self.y_offset) // self.glyph_height
+            self.max_length = random.randint(4, max_possible_length)
+        else:
+            self.y_offset = random.randint(-300, 0)
+            visible_rows = self.screen_h // self.glyph_height
+            self.max_length = random.randint(int(visible_rows * 0.6), int(visible_rows * 1.2))
+
         self.symbols.clear()
         self.age = 0
         self.speed = (1.2 + (36 - self.font_size) * 0.1) * self.rain_speed
@@ -81,10 +90,10 @@ def parse_unicode_range(rng):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Egyptian Hieroglyph Screensaver (rotation-free)",
+        description="Digital Rain Screensaver with Egyptian Hieroglyphs",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument("--color", choices=["green", "blue"], default="green")
+    parser.add_argument("--color", choices=["green", "blue"], default="blue")
     parser.add_argument("--font", default="NotoSansEgyptianHieroglyphs-Regular.ttf")
     parser.add_argument("--glyph_range", default="13000-1342F")
     parser.add_argument("--min_font", type=int, default=12)
@@ -170,4 +179,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
